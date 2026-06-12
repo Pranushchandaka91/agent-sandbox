@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -10,3 +10,7 @@ class Trace:
     tool_output: dict
     final_answer: str
     timestamp: str
+    steps: list = field(default_factory=list)
+    token_calls: list = field(default_factory=list)
+    total_tokens: int = 0
+    estimated_cost_usd: float = 0.0
