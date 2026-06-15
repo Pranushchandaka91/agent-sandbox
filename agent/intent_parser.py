@@ -1,8 +1,21 @@
 import json
+import os
 from openai import OpenAI
 from agent.tool_registry import TOOL_DEFINITIONS
 
-client = OpenAI()
+
+def _make_client():
+    base = OpenAI()
+    if os.environ.get("LANGSMITH_TRACING", "").lower() == "true":
+        try:
+            from langsmith.wrappers import wrap_openai
+            return wrap_openai(base)
+        except Exception:
+            pass
+    return base
+
+
+client = _make_client()
 
 _INTENT_LABELS = {
     "get_weather":  lambda p: f"Get current weather for {p.get('city', 'a city')}",

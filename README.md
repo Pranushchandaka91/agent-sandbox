@@ -30,3 +30,17 @@ Each prompt produces a trace showing:
 - Tool Input
 - Tool Output
 - Final Answer
+
+## Observability (LangSmith)
+
+The sandbox automatically sends token usage, cost, and latency data to [LangSmith](https://smith.langchain.com/) when configured. To enable it, set the following in your `.env`:
+
+```
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_langsmith_key_here
+LANGSMITH_PROJECT=agent-sandbox
+```
+
+Each call to `run_agent` appears as a named trace (`agent_run`) in the LangSmith dashboard, with all nested OpenAI calls captured automatically via the wrapped client.
+
+The sandbox runs fine without LangSmith — if `LANGSMITH_TRACING` is not `true` or the package is unavailable, all LangSmith code is silently skipped and the existing console TOKEN USAGE table is unaffected.

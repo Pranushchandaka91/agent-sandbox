@@ -1,11 +1,38 @@
 import json
+import os
 from datetime import datetime
 from openai import OpenAI
 from agent.tool_registry import TOOL_REGISTRY, TOOL_DEFINITIONS
 from agent.token_tracker import TokenTracker
 from trace import Trace
 
-client = OpenAI()
+
+def _make_client():
+    base = OpenAI()
+    if os.environ.get("LANGSMITH_TRACING", "").lower() == "true":
+        try:
+            from langsmith.wrappers import wrap_openai
+            return wrap_openai(base)
+        except Exception:
+            pass
+    return base
+
+
+def _noop(f):
+    return f
+
+
+try:
+    if os.environ.get("LANGSMITH_TRACING", "").lower() == "true":
+        from langsmith import traceable as _traceable_factory
+        _traceable = _traceable_factory(name="agent_run")
+    else:
+        _traceable = _noop
+except Exception:
+    _traceable = _noop
+
+
+client = _make_client()
 MAX_STEPS = 10
 
 
@@ -26,6 +53,7 @@ def _intent_label(tool_name: str, tool_input: dict) -> str:
     return f"Use {tool_name} with {tool_input}"
 
 
+@_traceable
 def run_agent(prompt: str) -> Trace:
     tracker = TokenTracker()
     messages = [{"role": "user", "content": prompt}]
