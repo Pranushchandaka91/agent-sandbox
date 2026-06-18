@@ -20,8 +20,8 @@ PROMPTS = [
     "What notes do I have saved?",
     "What is the weather in Hyderabad and Mumbai, and what is the temperature difference between them?",
     "Save a note called 'weather' with the current temperature in Delhi, then list all my notes.",
-    "Tell me about the GitHub repo sahithsundarw/scamshield — how many stars does it have and what language is it in?",
-    "Fetch the README for sahithsundarw/scamshield and give me a two-sentence summary of what the project does.",
+    "Tell me about the GitHub repo sahithsundarw/sentinel — how many stars does it have and what language is it in?",
+    "Fetch the README for sahithsundarw/sentinel and give me a two-sentence summary of what the project does.",
 ]
 
 # ── trace box dimensions ──────────────────────────────────────
