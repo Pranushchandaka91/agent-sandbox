@@ -4,15 +4,16 @@ _SAFE_PATTERN = re.compile(r"^[\d\s\+\-\*\/\(\)\.\%]+$")
 
 
 def calculate(expression: str) -> dict:
+    if not expression or not expression.strip():
+        return {"status": "error", "data": None, "error": "expression parameter is required."}
     if not _SAFE_PATTERN.match(expression):
         return {
-            "expression": expression,
-            "result": None,
             "status": "error",
-            "message": "Invalid expression. Only arithmetic operations are allowed.",
+            "data":   None,
+            "error":  "Invalid expression. Only arithmetic operations are allowed.",
         }
     try:
         result = eval(expression, {"__builtins__": {}})  # noqa: S307
-        return {"expression": expression, "result": result, "status": "success"}
+        return {"status": "success", "data": {"expression": expression, "result": result}, "error": None}
     except Exception as e:
-        return {"expression": expression, "result": None, "status": "error", "message": str(e)}
+        return {"status": "error", "data": None, "error": str(e)}

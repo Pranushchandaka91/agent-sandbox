@@ -2,22 +2,47 @@ notes_db: dict[str, str] = {}
 
 
 def manage_notes(action: str, key: str = None, content: str = None) -> dict:
+    if not action or not action.strip():
+        return {"status": "error", "data": None, "error": "action parameter is required."}
+
     if action == "save":
-        notes_db[key] = content
-        return {"action": "save", "key": key, "status": "success", "message": f"Note saved under '{key}'."}
+        if not key:
+            return {"status": "error", "data": None, "error": "key is required for save."}
+        notes_db[key] = content or ""
+        return {
+            "status": "success",
+            "data":   {"action": "save", "key": key, "message": f"Note saved under '{key}'."},
+            "error":  None,
+        }
 
     if action == "get":
+        if not key:
+            return {"status": "error", "data": None, "error": "key is required for get."}
         if key not in notes_db:
-            return {"action": "get", "key": key, "status": "error", "message": f"Note '{key}' not found."}
-        return {"action": "get", "key": key, "content": notes_db[key], "status": "success"}
+            return {"status": "error", "data": None, "error": f"Note '{key}' not found."}
+        return {
+            "status": "success",
+            "data":   {"action": "get", "key": key, "content": notes_db[key]},
+            "error":  None,
+        }
 
     if action == "list":
-        return {"action": "list", "notes": dict(notes_db), "count": len(notes_db)}
+        return {
+            "status": "success",
+            "data":   {"action": "list", "notes": dict(notes_db), "count": len(notes_db)},
+            "error":  None,
+        }
 
     if action == "delete":
+        if not key:
+            return {"status": "error", "data": None, "error": "key is required for delete."}
         if key not in notes_db:
-            return {"action": "delete", "key": key, "status": "error", "message": f"Note '{key}' not found."}
+            return {"status": "error", "data": None, "error": f"Note '{key}' not found."}
         del notes_db[key]
-        return {"action": "delete", "key": key, "status": "success", "message": f"Note '{key}' deleted."}
+        return {
+            "status": "success",
+            "data":   {"action": "delete", "key": key, "message": f"Note '{key}' deleted."},
+            "error":  None,
+        }
 
-    return {"action": action, "status": "error", "message": f"Unknown action '{action}'."}
+    return {"status": "error", "data": None, "error": f"Unknown action '{action}'."}

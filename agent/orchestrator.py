@@ -50,6 +50,10 @@ def _intent_label(tool_name: str, tool_input: dict) -> str:
             "list":   "List all saved notes",
             "delete": f"Delete note '{key}'",
         }.get(action, f"Manage notes: {action}")
+    if tool_name == "github_repo_info":
+        return f"Fetch GitHub repository info for {tool_input.get('repo', 'a repo')}"
+    if tool_name == "github_readme":
+        return f"Fetch README for GitHub repository {tool_input.get('repo', 'a repo')}"
     return f"Use {tool_name} with {tool_input}"
 
 
@@ -98,15 +102,14 @@ def run_agent(prompt: str) -> Trace:
             tool_input = json.loads(tc.function.arguments)
 
             if tool_name not in TOOL_REGISTRY:
-                tool_output = {"status": "error", "message": f"Unknown tool '{tool_name}'"}
-                status = "error"
+                tool_output = {"status": "error", "data": None, "error": f"Unknown tool '{tool_name}'"}
             else:
                 try:
                     tool_output = TOOL_REGISTRY[tool_name]["fn"](**tool_input)
-                    status = "success"
                 except Exception as e:
-                    tool_output = {"status": "error", "message": str(e)}
-                    status = "error"
+                    tool_output = {"status": "error", "data": None, "error": str(e)}
+
+            status = tool_output.get("status", "error")
 
             steps.append({
                 "step_number": step_number,
@@ -116,10 +119,15 @@ def run_agent(prompt: str) -> Trace:
                 "status":      status,
             })
 
+            if status == "success":
+                llm_content = json.dumps(tool_output.get("data"), ensure_ascii=False)
+            else:
+                llm_content = json.dumps({"error": tool_output.get("error")}, ensure_ascii=False)
+
             messages.append({
                 "role":        "tool",
                 "tool_call_id": tc.id,
-                "content":     json.dumps(tool_output, ensure_ascii=False),
+                "content":     llm_content,
             })
 
     summary = tracker.summary()

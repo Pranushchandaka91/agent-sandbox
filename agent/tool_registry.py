@@ -1,6 +1,7 @@
 from tools.weather import get_weather
 from tools.calculator import calculate
 from tools.notes import manage_notes
+from tools.github import github_repo_info, github_readme
 
 TOOL_REGISTRY = {
     "get_weather": {
@@ -56,6 +57,40 @@ TOOL_REGISTRY = {
                         "content": {"type": "string", "description": "Note content. Required for save."},
                     },
                     "required": ["action"],
+                },
+            },
+        },
+    },
+    "github_repo_info": {
+        "fn": github_repo_info,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "github_repo_info",
+                "description": "Get information about a GitHub repository including stars, language, description, and open issues. Input is 'owner/repo'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/scamshield'."},
+                    },
+                    "required": ["repo"],
+                },
+            },
+        },
+    },
+    "github_readme": {
+        "fn": github_readme,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "github_readme",
+                "description": "Fetch the README content of a GitHub repository as plain text. Input is 'owner/repo'. Use when the user wants to read or summarize what a repository is about.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/scamshield'."},
+                    },
+                    "required": ["repo"],
                 },
             },
         },
