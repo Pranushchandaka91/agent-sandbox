@@ -22,6 +22,8 @@ PROMPTS = [
     "Save a note called 'weather' with the current temperature in Delhi, then list all my notes.",
     "Tell me about the GitHub repo sahithsundarw/sentinel — how many stars does it have and what language is it in?",
     "Fetch the README for sahithsundarw/sentinel and give me a two-sentence summary of what the project does.",
+    "Using the README, what was the key finding about supervised fine-tuning in sahithsundarw/sentinel?",
+    "According to its README, what reward does the Q-learner get for a correct block in sahithsundarw/sentinel?",
 ]
 
 # ── trace box dimensions ──────────────────────────────────────

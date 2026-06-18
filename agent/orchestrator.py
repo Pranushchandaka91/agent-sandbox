@@ -4,6 +4,7 @@ from datetime import datetime
 from openai import OpenAI
 from agent.tool_registry import TOOL_REGISTRY, TOOL_DEFINITIONS
 from agent.token_tracker import TokenTracker
+from agent.context import current_tracker
 from trace import Trace
 
 
@@ -54,6 +55,8 @@ def _intent_label(tool_name: str, tool_input: dict) -> str:
         return f"Fetch GitHub repository info for {tool_input.get('repo', 'a repo')}"
     if tool_name == "github_readme":
         return f"Fetch README for GitHub repository {tool_input.get('repo', 'a repo')}"
+    if tool_name == "query_document":
+        return f"RAG query on {tool_input.get('repo', 'a repo')}: {tool_input.get('question', '')[:40]}"
     return f"Use {tool_name} with {tool_input}"
 
 
@@ -104,10 +107,13 @@ def run_agent(prompt: str) -> Trace:
             if tool_name not in TOOL_REGISTRY:
                 tool_output = {"status": "error", "data": None, "error": f"Unknown tool '{tool_name}'"}
             else:
+                _token = current_tracker.set(tracker)
                 try:
                     tool_output = TOOL_REGISTRY[tool_name]["fn"](**tool_input)
                 except Exception as e:
                     tool_output = {"status": "error", "data": None, "error": str(e)}
+                finally:
+                    current_tracker.reset(_token)
 
             status = tool_output.get("status", "error")
 

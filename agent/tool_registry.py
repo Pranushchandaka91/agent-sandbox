@@ -2,6 +2,7 @@ from tools.weather import get_weather
 from tools.calculator import calculate
 from tools.notes import manage_notes
 from tools.github import github_repo_info, github_readme
+from tools.rag_tool import query_document
 
 TOOL_REGISTRY = {
     "get_weather": {
@@ -91,6 +92,24 @@ TOOL_REGISTRY = {
                         "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/scamshield'."},
                     },
                     "required": ["repo"],
+                },
+            },
+        },
+    },
+    "query_document": {
+        "fn": query_document,
+        "definition": {
+            "type": "function",
+            "function": {
+                "name": "query_document",
+                "description": "Answer a specific question about a GitHub repository's README using retrieval. Use when the user asks a detailed or specific question about what a repo does, rather than just basic repo stats. Inputs: 'repo' (owner/name) and 'question'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "repo":     {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/sentinel'."},
+                        "question": {"type": "string", "description": "The specific question to answer from the repository's README."},
+                    },
+                    "required": ["repo", "question"],
                 },
             },
         },
