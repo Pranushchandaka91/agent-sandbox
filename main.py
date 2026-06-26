@@ -1,5 +1,6 @@
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
+import argparse
 import json
 import os
 import textwrap
@@ -26,9 +27,10 @@ PROMPTS = [
     "According to its README, what reward does the Q-learner get for a correct block in sahithsundarw/sentinel?",
 ]
 
+GITHUB_PROMPTS = PROMPTS[6:8]
+RAG_PROMPTS    = PROMPTS[8:10]
+
 # ── trace box dimensions ──────────────────────────────────────
-# │  LABEL         │ CONTENT                                   │
-# 1 + 2 + 13 + 3 + 51 + 2 = 72 chars total
 BOX_WIDTH     = 72
 LABEL_WIDTH   = 13
 CONTENT_WIDTH = 51
@@ -109,8 +111,53 @@ def print_token_usage(trace: Trace) -> None:
     print()
 
 
-if __name__ == "__main__":
-    for prompt in PROMPTS:
+def run_prompts(prompts: list[str]) -> None:
+    for prompt in prompts:
         print(f"Running: {prompt!r}")
         trace = run_agent(prompt)
         print_trace(trace)
+
+
+def run_interactive() -> None:
+    repo = input("Enter GitHub repo (owner/name): ").strip()
+    if not repo or "/" not in repo:
+        print("Invalid repo format. Expected owner/name.")
+        return
+
+    print(f"\nRepo: {repo}  |  Type 'exit' or 'quit' to stop.\n")
+
+    while True:
+        try:
+            question = input("Question: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye.")
+            break
+
+        if question.lower() in ("exit", "quit"):
+            print("Goodbye.")
+            break
+        if not question:
+            continue
+
+        prompt = f"Answer this question about the {repo} GitHub repo using its code and documentation: {question}"
+        trace = run_agent(prompt)
+        print_trace(trace)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Agent Sandbox runner")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--all",         action="store_true", help="Run all test prompts")
+    group.add_argument("--github",      action="store_true", help="Run the 2 GitHub prompts")
+    group.add_argument("--rag",         action="store_true", help="Run the 2 RAG prompts")
+    group.add_argument("--interactive", action="store_true", help="Launch interactive CLI")
+    args = parser.parse_args()
+
+    if args.all:
+        run_prompts(PROMPTS)
+    elif args.github:
+        run_prompts(GITHUB_PROMPTS)
+    elif args.rag:
+        run_prompts(RAG_PROMPTS)
+    else:
+        run_interactive()

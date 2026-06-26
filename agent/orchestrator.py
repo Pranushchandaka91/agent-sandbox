@@ -99,6 +99,7 @@ def run_agent(prompt: str) -> Trace:
         })
 
         # Execute each tool call and append results
+        self_contained_answer = None
         for tc in message.tool_calls:
             step_number += 1
             tool_name = tc.function.name
@@ -126,7 +127,10 @@ def run_agent(prompt: str) -> Trace:
             })
 
             if status == "success":
-                llm_content = json.dumps(tool_output.get("data"), ensure_ascii=False)
+                data = tool_output.get("data") or {}
+                if "answer" in data:
+                    self_contained_answer = data["answer"]
+                llm_content = json.dumps(data, ensure_ascii=False)
             else:
                 llm_content = json.dumps({"error": tool_output.get("error")}, ensure_ascii=False)
 
@@ -135,6 +139,10 @@ def run_agent(prompt: str) -> Trace:
                 "tool_call_id": tc.id,
                 "content":     llm_content,
             })
+
+        if self_contained_answer is not None:
+            final_answer = self_contained_answer
+            break
 
     summary = tracker.summary()
     first = steps[0] if steps else {}
