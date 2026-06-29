@@ -72,7 +72,7 @@ TOOL_REGISTRY = {
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/scamshield'."},
+                        "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'Pranushchandaka91/agent-sandbox'."},
                     },
                     "required": ["repo"],
                 },
@@ -89,7 +89,7 @@ TOOL_REGISTRY = {
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/scamshield'."},
+                        "repo": {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'Pranushchandaka91/agent-sandbox'."},
                     },
                     "required": ["repo"],
                 },
@@ -106,7 +106,7 @@ TOOL_REGISTRY = {
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "repo":     {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'sahithsundarw/sentinel'."},
+                        "repo":     {"type": "string", "description": "Repository in 'owner/name' format, e.g. 'Pranushchandaka91/agent-sandbox'."},
                         "question": {"type": "string", "description": "The specific question to answer from the repository's README."},
                     },
                     "required": ["repo", "question"],

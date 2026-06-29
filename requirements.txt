@@ -3,3 +3,4 @@ python-dotenv
 langsmith
 requests
 chromadb
+mcp

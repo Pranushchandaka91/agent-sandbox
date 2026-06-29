@@ -2,6 +2,7 @@ import base64
 import re
 import requests
 from openai import OpenAI
+from typing import Optional
 
 _chroma_client = None
 _collection = None
@@ -116,6 +117,33 @@ def index_document(doc_id: str, text: str, tracker=None) -> int:
     return len(chunks)
 
 
+def _fetch_file_mcp(owner: str, repo_name: str, path: str) -> Optional[str]:
+    """Fetch a single file's text content via the MCP get_file_contents tool.
+
+    Uses call_tool_raw + extract_resource_content so we get the actual file
+    body from the EmbeddedResource block, not the short status TextContent
+    ("successfully downloaded text file (SHA: ...)") that GitHub MCP returns.
+
+    Returns None if MCP is unavailable or the call fails so the caller can
+    fall back to the direct GitHub REST API.
+    """
+    try:
+        from agent.mcp_client import get_client, extract_resource_content
+        mcp = get_client()
+        if mcp is None or not mcp.connected:
+            return None
+        raw = mcp.call_tool_raw("get_file_contents", {
+            "owner": owner,
+            "repo":  repo_name,
+            "path":  path,
+        })
+        if getattr(raw, "isError", False):
+            return None
+        return extract_resource_content(raw)
+    except Exception:
+        return None
+
+
 def index_repo(repo: str, tracker=None) -> int:
     """Fetch every .md and .py file from the repo and index them all."""
     # Resolve default branch
@@ -155,19 +183,24 @@ def index_repo(repo: str, tracker=None) -> int:
     all_documents: list[str] = []
     all_metadatas: list[dict] = []
 
+    owner, repo_name = repo.split("/", 1)
+
     for path in selected:
-        try:
-            r = requests.get(
-                f"https://api.github.com/repos/{repo}/contents/{path}",
-                headers=_GITHUB_HEADERS,
-                timeout=10,
-            )
-            if not r.ok:
+        text = _fetch_file_mcp(owner, repo_name, path)
+        if text is None:
+            # Fallback: GitHub REST API
+            try:
+                r = requests.get(
+                    f"https://api.github.com/repos/{repo}/contents/{path}",
+                    headers=_GITHUB_HEADERS,
+                    timeout=10,
+                )
+                if not r.ok:
+                    continue
+                content_b64 = r.json().get("content", "")
+                text = base64.b64decode(content_b64).decode("utf-8", errors="replace")
+            except Exception:
                 continue
-            content_b64 = r.json().get("content", "")
-            text = base64.b64decode(content_b64).decode("utf-8", errors="replace")
-        except Exception:
-            continue
 
         file_type = "py" if path.endswith(".py") else "md"
         chunks = chunk_python(text) if file_type == "py" else chunk_text(text)

@@ -11,6 +11,9 @@ load_dotenv()
 if not os.environ.get("OPENAI_API_KEY"):
     sys.exit("OPENAI_API_KEY not found in .env")
 
+if not os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN"):
+    sys.exit("GITHUB_PERSONAL_ACCESS_TOKEN not found in .env — required for the GitHub MCP server")
+
 from agent.orchestrator import run_agent  # noqa: E402 — must load env first
 from trace import Trace  # noqa: E402
 
@@ -21,10 +24,10 @@ PROMPTS = [
     "What notes do I have saved?",
     "What is the weather in Hyderabad and Mumbai, and what is the temperature difference between them?",
     "Save a note called 'weather' with the current temperature in Delhi, then list all my notes.",
-    "Tell me about the GitHub repo sahithsundarw/sentinel — how many stars does it have and what language is it in?",
-    "Fetch the README for sahithsundarw/sentinel and give me a two-sentence summary of what the project does.",
-    "Using the README, what was the key finding about supervised fine-tuning in sahithsundarw/sentinel?",
-    "According to its README, what reward does the Q-learner get for a correct block in sahithsundarw/sentinel?",
+    "Tell me about the GitHub repo Pranushchandaka91/agent-sandbox — what files does it contain and what is it written in?",
+    "Fetch the README for Pranushchandaka91/agent-sandbox and give me a two-sentence summary of what the project does.",
+    "Using the repo's code, what are the default chunk_size and overlap values used in the RAG pipeline in Pranushchandaka91/agent-sandbox?",
+    "According to the orchestrator code, what does Pranushchandaka91/agent-sandbox return when a tool call raises an exception?",
 ]
 
 GITHUB_PROMPTS = PROMPTS[6:8]

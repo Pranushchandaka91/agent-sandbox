@@ -1,10 +1,12 @@
 import json
 import os
+import sys
 from datetime import datetime
 from openai import OpenAI
 from agent.tool_registry import TOOL_REGISTRY, TOOL_DEFINITIONS
 from agent.token_tracker import TokenTracker
 from agent.context import current_tracker
+from agent.mcp_client import init_client, get_client, mcp_to_openai
 from trace import Trace
 
 
@@ -36,6 +38,26 @@ except Exception:
 client = _make_client()
 MAX_STEPS = 10
 
+# ── MCP startup ───────────────────────────────────────────────────────────────
+_mcp_tool_names: set[str] = set()
+_mcp_tool_defs:  list[dict] = []
+
+def _init_mcp() -> None:
+    if not os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN"):
+        return
+    mcp = init_client()
+    if mcp is None:
+        return
+    for t in mcp.list_tools():
+        _mcp_tool_names.add(t.name)
+        _mcp_tool_defs.append(mcp_to_openai(t))
+
+_init_mcp()
+
+ALL_TOOL_DEFINITIONS = TOOL_DEFINITIONS + _mcp_tool_defs
+
+
+# ── intent label helpers ──────────────────────────────────────────────────────
 
 def _intent_label(tool_name: str, tool_input: dict) -> str:
     if tool_name == "get_weather":
@@ -57,8 +79,37 @@ def _intent_label(tool_name: str, tool_input: dict) -> str:
         return f"Fetch README for GitHub repository {tool_input.get('repo', 'a repo')}"
     if tool_name == "query_document":
         return f"RAG query on {tool_input.get('repo', 'a repo')}: {tool_input.get('question', '')[:40]}"
+    if tool_name in _mcp_tool_names:
+        return f"MCP/{tool_name}: {json.dumps(tool_input)[:60]}"
     return f"Use {tool_name} with {tool_input}"
 
+
+# ── tool dispatch ─────────────────────────────────────────────────────────────
+
+def _dispatch_tool(tool_name: str, tool_input: dict, tracker: TokenTracker) -> dict:
+    """Route a tool call to MCP or the local registry and return an envelope."""
+    if tool_name in _mcp_tool_names:
+        mcp = get_client()
+        if mcp is None or not mcp.connected:
+            return {"status": "error", "data": None, "error": "MCP client is not available"}
+        try:
+            return mcp.call_tool(tool_name, tool_input)
+        except Exception as exc:
+            return {"status": "error", "data": None, "error": str(exc)}
+
+    if tool_name not in TOOL_REGISTRY:
+        return {"status": "error", "data": None, "error": f"Unknown tool '{tool_name}'"}
+
+    _token = current_tracker.set(tracker)
+    try:
+        return TOOL_REGISTRY[tool_name]["fn"](**tool_input)
+    except Exception as exc:
+        return {"status": "error", "data": None, "error": str(exc)}
+    finally:
+        current_tracker.reset(_token)
+
+
+# ── main agent loop ───────────────────────────────────────────────────────────
 
 @_traceable
 def run_agent(prompt: str) -> Trace:
@@ -72,7 +123,7 @@ def run_agent(prompt: str) -> Trace:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            tools=TOOL_DEFINITIONS,
+            tools=ALL_TOOL_DEFINITIONS,
             tool_choice="auto",
         )
         message = response.choices[0].message
@@ -84,7 +135,6 @@ def run_agent(prompt: str) -> Trace:
 
         tracker.track(response.usage, f"step_{i + 1}")
 
-        # Append the assistant turn with all tool calls
         messages.append({
             "role": "assistant",
             "content": message.content,
@@ -98,24 +148,13 @@ def run_agent(prompt: str) -> Trace:
             ],
         })
 
-        # Execute each tool call and append results
         self_contained_answer = None
         for tc in message.tool_calls:
             step_number += 1
-            tool_name = tc.function.name
+            tool_name  = tc.function.name
             tool_input = json.loads(tc.function.arguments)
 
-            if tool_name not in TOOL_REGISTRY:
-                tool_output = {"status": "error", "data": None, "error": f"Unknown tool '{tool_name}'"}
-            else:
-                _token = current_tracker.set(tracker)
-                try:
-                    tool_output = TOOL_REGISTRY[tool_name]["fn"](**tool_input)
-                except Exception as e:
-                    tool_output = {"status": "error", "data": None, "error": str(e)}
-                finally:
-                    current_tracker.reset(_token)
-
+            tool_output = _dispatch_tool(tool_name, tool_input, tracker)
             status = tool_output.get("status", "error")
 
             steps.append({
@@ -124,6 +163,7 @@ def run_agent(prompt: str) -> Trace:
                 "tool_input":  tool_input,
                 "tool_output": tool_output,
                 "status":      status,
+                "via_mcp":     tool_name in _mcp_tool_names,
             })
 
             if status == "success":
@@ -135,9 +175,9 @@ def run_agent(prompt: str) -> Trace:
                 llm_content = json.dumps({"error": tool_output.get("error")}, ensure_ascii=False)
 
             messages.append({
-                "role":        "tool",
+                "role":         "tool",
                 "tool_call_id": tc.id,
-                "content":     llm_content,
+                "content":      llm_content,
             })
 
         if self_contained_answer is not None:
